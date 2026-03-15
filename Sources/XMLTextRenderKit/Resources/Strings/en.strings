@@ -1,0 +1,11 @@
+//
+//  en.strings
+//  XMLTextRenderKit
+//
+//  Created by haharsw on 2026/3/6.
+//
+
+"ok" = "OK";
+
+"apphelp_pasted" = "has been copied to the clipboard";
+"apphelp_rom_import_guide" = "ROM Import Guide";

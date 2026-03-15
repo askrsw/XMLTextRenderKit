@@ -1,0 +1,10 @@
+//
+//  zh.strings
+//  XMLTextRenderKit
+//
+//  Created by haharsw on 2026/3/6.
+//
+
+"ok" = "确定";
+
+"apphelp_pasted" = "已被复制到剪贴板";

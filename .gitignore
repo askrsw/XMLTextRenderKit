@@ -1,0 +1,40 @@
+.DS_Store
+.Spotlight-V100
+.Trashes
+
+# Xcode user data and UI state (do not track file open/selection history)
+xcuserdata/
+*.xcuserstate
+*.xcuserdatad
+UserInterfaceState.xcuserstate
+
+# Xcode project/workspace user data
+*.xcodeproj/xcuserdata/
+*.xcodeproj/project.xcworkspace/xcuserdata/
+*.xcodeproj/project.xcworkspace/xcshareddata/WorkspaceSettings.xcsettings
+*.xcworkspace/xcuserdata/
+*.xcworkspace/xcshareddata/WorkspaceSettings.xcsettings
+
+# Xcode source control metadata
+*.xcscmblueprint
+*.xccheckout
+
+# Build artifacts
+DerivedData/
+.build/
+.swiftpm/
+Packages/
+Package.resolved
+
+# Generated Xcode project/workspace content
+*.xcodeproj/*
+*.xcworkspace/*
+!*.xcodeproj/project.pbxproj
+!*.xcworkspace/contents.xcworkspacedata
+!*.xcworkspace/xcshareddata/
+!*.xcodeproj/xcshareddata/
+
+# Editor/OS temp files
+*.swp
+*.tmp
+*.moved-aside
