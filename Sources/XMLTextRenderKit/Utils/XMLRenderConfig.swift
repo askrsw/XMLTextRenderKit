@@ -10,7 +10,6 @@ import UIKit
 public class XMLRenderConfig {
     internal static var shared = XMLRenderConfig()
 
-    public var textInfoBackgroundColor: UIColor?
     public var xmlImageContainerBackgroundColor: UIColor?
     public var xmlImageContainerBorderColor: UIColor?
     public var mainColor: UIColor
@@ -19,13 +18,6 @@ public class XMLRenderConfig {
     public var currentLanguageKey: String
 
     public init() {
-        self.textInfoBackgroundColor = {
-            if UIColor.isDarkMode {
-                return .init(hex: 0x1F1F1F)
-            } else {
-                return .init(hex: 0xFFFFFF)
-            }
-        }()
         self.xmlImageContainerBackgroundColor = {
             if UIColor.isDarkMode {
                 return .init(hex: 0x1F1F1F)

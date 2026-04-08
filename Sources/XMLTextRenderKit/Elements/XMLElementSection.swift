@@ -9,15 +9,16 @@ import UIKit
 import SWXMLHash
 
 final class XMLElementSection: XMLElementBase {
-    let id: String
-    let block: Bool
+    let sectionTopPadding: CGFloat
+    let sectionBottomPadding: CGFloat
     let structuredContents: [XMLElementBase]
 
     // MARK: - Interface
 
     required init(xml: XMLIndexer) {
-        id = XMLElementBase.parseStringValue(xml: xml, name: "id")!
-        block = XMLElementBase.parseBoolValue(xml: xml, name: "block") ?? false
+        //
+        sectionTopPadding = XMLElementBase.parseCGFloatValue(xml: xml, name: "section-toppadding") ?? 0
+        sectionBottomPadding = XMLElementBase.parseCGFloatValue(xml: xml, name: "section-bottompadding") ?? 0
         structuredContents = XMLFileParser.parse(xml: xml)
         super.init(xml: xml)
 
@@ -28,7 +29,6 @@ final class XMLElementSection: XMLElementBase {
         let sectionLeading = leading
         let sectionTrailing = trailing
         for e in structuredContents {
-            e.updateBlockSection(block)
             if let paragraph = e as? XMLElementParagraph {
                 if paragraph.hasFontSizeAttribute == false {
                     paragraph.fontSize = fontsize
@@ -48,48 +48,40 @@ final class XMLElementSection: XMLElementBase {
                 if paragraph.hasTrailingAttribute == false {
                     paragraph.trailing = sectionTrailing
                 }
-            } else if let title = e as? XMLElementTitle {
-                if title.hasFontSizeAttribute == false {
-                    title.fontSize = fontsize
+            } else if let list = e as? XMLElementList {
+                if list.hasFontSizeAttribute == false {
+                    list.fontSize = fontsize
                 }
-                if title.hasAlignmentAttribute == false {
-                    title.textAlignment = alignment
+                if list.hasAlignmentAttribute == false {
+                    list.textAlignment = alignment
                 }
-                if title.hasTopPaddingAttribute == false {
-                    title.topPadding = toppadding
+                if list.hasTopPaddingAttribute == false {
+                    list.topPadding = toppadding
                 }
-                if title.hasBottomPaddingAttribute == false {
-                    title.bottomPadding = bottompadding
+                if list.hasBottomPaddingAttribute == false {
+                    list.bottomPadding = bottompadding
                 }
-                if title.hasLeadingAttribute == false {
-                    title.leading = sectionLeading
+                if list.hasLeadingAttribute == false {
+                    list.leading = sectionLeading
                 }
-                if title.hasTrailingAttribute == false {
-                    title.trailing = sectionTrailing
+                if list.hasTrailingAttribute == false {
+                    list.trailing = sectionTrailing
                 }
             }
         }
 
-        if block {
-            structuredContents.first?.topPadding = 15
-            structuredContents.last?.bottomPadding = 15
-        }
+        structuredContents.first?.topPadding += sectionTopPadding
+        structuredContents.last?.bottomPadding += sectionBottomPadding
     }
 
-    init(elements: [XMLElementBase], id: String, block: Bool = true) {
-        self.id = id
-        self.block = block
+    init(elements: [XMLElementBase], id: String?) {
+        self.sectionTopPadding = 0
+        self.sectionBottomPadding = 0
         self.structuredContents = elements
-        super.init()
+        super.init(id: id)
 
-        for e in structuredContents {
-            e.updateBlockSection(block)
-        }
-
-        if block {
-            structuredContents.first?.topPadding = 15
-            structuredContents.last?.bottomPadding = 15
-        }
+        structuredContents.first?.topPadding += sectionTopPadding
+        structuredContents.last?.bottomPadding += sectionBottomPadding
     }
 
     override var viewWidth: CGFloat {

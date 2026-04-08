@@ -15,6 +15,7 @@ enum XMLImageData {
 
 final class XMLElementParagraph: XMLElementBase {
     let rawText: String
+    let inlineNodes: [XMLInlineNode]
     let marked: Bool
     let indent: String?
     private var _attributedString: NSMutableAttributedString?
@@ -26,6 +27,7 @@ final class XMLElementParagraph: XMLElementBase {
 
     required init(xml: XMLIndexer) {
         rawText = xml.element!.text.trimmingCharacters(in: .whitespacesAndNewlines)
+        inlineNodes = XMLInlineNodeParser.parseNodes(from: xml)
         marked = XMLElementBase.parseBoolValue(xml: xml, name: "marked") ?? false
         indent = XMLElementBase.parseStringValue(xml: xml, name: "indent")
         super.init(xml: xml)
@@ -103,9 +105,31 @@ final class XMLElementParagraph: XMLElementBase {
 
     // MARK: - Utils
 
-    private lazy var regularTextAttributes = { [weak self] (headIndent: CGFloat, color: UIColor, underline: Bool) -> [NSAttributedString.Key: Any] in
+    private lazy var textAttributes = { [weak self] (
+        headIndent: CGFloat,
+        color: UIColor,
+        underline: Bool,
+        isBold: Bool,
+        isItalic: Bool
+    ) -> [NSAttributedString.Key: Any] in
         let fontSize = self?.fontSize ?? 17.0
-        let regularFont = UIFont(name: "TimesNewRomanPSMT", size: fontSize) ?? UIFont.systemFont(ofSize: fontSize)
+        let font: UIFont = {
+            if isBold && isItalic {
+                let descriptor = UIFontDescriptor(name: "TimesNewRomanPSMT", size: fontSize)
+                    .withSymbolicTraits([.traitBold, .traitItalic])
+                if let descriptor {
+                    return UIFont(descriptor: descriptor, size: fontSize)
+                }
+                return UIFont.systemFont(ofSize: fontSize, weight: .semibold)
+            }
+            if isBold {
+                return UIFont(name: "TimesNewRomanPS-BoldMT", size: fontSize) ?? UIFont.boldSystemFont(ofSize: fontSize)
+            }
+            if isItalic {
+                return UIFont(name: "TimesNewRomanPS-ItalicMT", size: fontSize) ?? UIFont.italicSystemFont(ofSize: fontSize)
+            }
+            return UIFont(name: "TimesNewRomanPSMT", size: fontSize) ?? UIFont.systemFont(ofSize: fontSize)
+        }()
         let paragraph = NSMutableParagraphStyle()
         paragraph.firstLineHeadIndent = 0
         paragraph.headIndent = headIndent
@@ -115,35 +139,7 @@ final class XMLElementParagraph: XMLElementBase {
         paragraph.paragraphSpacingBefore = 2
         paragraph.paragraphSpacing = 2
         let underlineStyle: NSUnderlineStyle = underline ? .single : []
-        return [ .font: regularFont, .foregroundColor: color, .paragraphStyle: paragraph, .underlineStyle: underlineStyle.rawValue ]
-    }
-
-    private lazy var boldTextAttribtes = { [weak self] (headIndent: CGFloat) -> [NSAttributedString.Key: Any] in
-        let fontSize = self?.fontSize ?? 17.0
-        let boldFont = UIFont(name: "TimesNewRomanPS-BoldMT", size: fontSize) ?? UIFont.boldSystemFont(ofSize: fontSize)
-        let paragraph = NSMutableParagraphStyle()
-        paragraph.firstLineHeadIndent = 0
-        paragraph.headIndent = headIndent
-        paragraph.tailIndent = (self?.xmlImages?.padTrailing ?? false) ? -20 : 0
-        paragraph.lineSpacing = 8.0
-        paragraph.alignment = self?.textAlignment ?? .left
-        paragraph.paragraphSpacingBefore = 2
-        paragraph.paragraphSpacing = 2
-        return [ .font: boldFont, .foregroundColor: UIColor.label, .paragraphStyle: paragraph ]
-    }
-
-    private lazy var italicTextAttribtes = { [weak self] (headIndent: CGFloat) -> [NSAttributedString.Key: Any] in
-        let fontSize = self?.fontSize ?? 17.0
-        let italicFont = UIFont(name: "TimesNewRomanPS-ItalicMT", size: fontSize) ?? UIFont.italicSystemFont(ofSize: fontSize)
-        let paragraph = NSMutableParagraphStyle()
-        paragraph.firstLineHeadIndent = 0
-        paragraph.headIndent = headIndent
-        paragraph.tailIndent = (self?.xmlImages?.padTrailing ?? false) ? -20 : 0
-        paragraph.lineSpacing = 8.0
-        paragraph.alignment = self?.textAlignment ?? .left
-        paragraph.paragraphSpacingBefore = 2
-        paragraph.paragraphSpacing = 2
-        return [ .font: italicFont, .foregroundColor: UIColor.label, .paragraphStyle: paragraph ]
+        return [ .font: font, .foregroundColor: color, .paragraphStyle: paragraph, .underlineStyle: underlineStyle.rawValue ]
     }
 
     private func buildContent() {
@@ -159,22 +155,7 @@ final class XMLElementParagraph: XMLElementBase {
         }
 
         let indentWidth = calculateIndentWidth()
-
-        let regularTextAttributes = self.regularTextAttributes(indentWidth, .label, false)
-        let attributedString = NSMutableAttributedString(string: rawText, attributes: regularTextAttributes)
-        XMLRegexPatterns.parseNewParagraphMark(attributedString: attributedString)
-
-        let boldTextAttribtes = self.boldTextAttribtes(indentWidth)
-        XMLRegexPatterns.parseSpecialFont(attributedString: attributedString, pattern: XMLRegexPatterns.boldText, attributes: boldTextAttribtes)
-
-        let italicTextAttribtes = self.italicTextAttribtes(indentWidth)
-        XMLRegexPatterns.parseSpecialFont(attributedString: attributedString, pattern: XMLRegexPatterns.italicText, attributes: italicTextAttribtes)
-
-        let pasteActionTextAttributes = self.regularTextAttributes(indentWidth, XMLRenderConfig.shared.mainColor, true)
-        XMLRegexPatterns.parsePasteActionText(attributedString: attributedString, attributes: pasteActionTextAttributes)
-
-        let linkAttributes = self.regularTextAttributes(indentWidth, XMLRenderConfig.shared.mainColor, true)
-        XMLRegexPatterns.parseLinkText(attributedString: attributedString, attributes: linkAttributes)
+        let attributedString = buildInlineAttributedString(headIndent: indentWidth)
 
         _attributedString = attributedString
         let containerSize = CGSize(width: maxWidth, height: .greatestFiniteMagnitude)
@@ -198,22 +179,61 @@ final class XMLElementParagraph: XMLElementBase {
             return 0
         }
 
-        let regularTextAttributes = self.regularTextAttributes(0, .label, false)
+        let regularTextAttributes = self.textAttributes(0, .label, false, false, false)
         let attributedString = NSMutableAttributedString(string: indent, attributes: regularTextAttributes)
 
-        let boldTextAttribtes = self.boldTextAttribtes(0)
+        let boldTextAttribtes = self.textAttributes(0, .label, false, true, false)
         XMLRegexPatterns.parseSpecialFont(attributedString: attributedString, pattern: XMLRegexPatterns.boldText, attributes: boldTextAttribtes)
 
-        let italicTextAttribtes = self.italicTextAttribtes(0)
+        let italicTextAttribtes = self.textAttributes(0, .label, false, false, true)
         XMLRegexPatterns.parseSpecialFont(attributedString: attributedString, pattern: XMLRegexPatterns.italicText, attributes: italicTextAttribtes)
 
-        let pasteActionTextAttributes = self.regularTextAttributes(0, XMLRenderConfig.shared.mainColor, true)
+        let pasteActionTextAttributes = self.textAttributes(0, XMLRenderConfig.shared.mainColor, true, false, false)
         XMLRegexPatterns.parsePasteActionText(attributedString: attributedString, attributes: pasteActionTextAttributes)
 
-        let linkAttributes = self.regularTextAttributes(0, XMLRenderConfig.shared.mainColor, true)
+        let linkAttributes = self.textAttributes(0, XMLRenderConfig.shared.mainColor, true, false, false)
         XMLRegexPatterns.parseLinkText(attributedString: attributedString, attributes: linkAttributes)
 
         return attributedString.boundingRect(with: .zero, options: .usesLineFragmentOrigin, context: nil).width
+    }
+
+    private func buildInlineAttributedString(headIndent: CGFloat) -> NSMutableAttributedString {
+        let nodes = inlineNodes.isEmpty ? [.text(rawText)] : inlineNodes
+        let renderer = XMLInlineRenderer { [weak self] style in
+            let color = style.isLink ? XMLRenderConfig.shared.mainColor : UIColor.label
+            var attributes = self?.textAttributes(headIndent, color, style.isLink, style.isBold, style.isItalic) ?? [:]
+            if let url = style.url {
+                attributes[.link] = url
+            }
+            return attributes
+        }
+        let attributedString = renderer.render(nodes: nodes)
+
+        if attributedString.length == 0 {
+            attributedString.append(NSAttributedString(
+                string: rawText,
+                attributes: textAttributes(headIndent, .label, false, false, false)
+            ))
+        }
+
+        applyLegacyInlineMarkup(to: attributedString, headIndent: headIndent)
+        return attributedString
+    }
+
+    private func applyLegacyInlineMarkup(to attributedString: NSMutableAttributedString, headIndent: CGFloat) {
+        XMLRegexPatterns.parseNewParagraphMark(attributedString: attributedString)
+
+        let boldTextAttribtes = textAttributes(headIndent, .label, false, true, false)
+        XMLRegexPatterns.parseSpecialFont(attributedString: attributedString, pattern: XMLRegexPatterns.boldText, attributes: boldTextAttribtes)
+
+        let italicTextAttribtes = textAttributes(headIndent, .label, false, false, true)
+        XMLRegexPatterns.parseSpecialFont(attributedString: attributedString, pattern: XMLRegexPatterns.italicText, attributes: italicTextAttribtes)
+
+        let pasteActionTextAttributes = textAttributes(headIndent, XMLRenderConfig.shared.mainColor, true, false, false)
+        XMLRegexPatterns.parsePasteActionText(attributedString: attributedString, attributes: pasteActionTextAttributes)
+
+        let linkAttributes = textAttributes(headIndent, XMLRenderConfig.shared.mainColor, true, false, false)
+        XMLRegexPatterns.parseLinkText(attributedString: attributedString, attributes: linkAttributes)
     }
 
     private static func getWidth(maxWidth width: CGFloat, inHeight height: CGFloat, excludeRect rect: CGRect?) -> CGFloat {

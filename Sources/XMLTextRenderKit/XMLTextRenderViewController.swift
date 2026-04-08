@@ -12,6 +12,7 @@ final public class XMLTextRenderViewController: UIViewController {
         [
             NSStringFromClass(XMLElementTitle.self): XMLTitleViewCell.self,
             NSStringFromClass(XMLElementParagraph.self): XMLParagraphViewCell.self,
+            NSStringFromClass(XMLElementList.self): XMLListViewCell.self,
             NSStringFromClass(XMLElementFooter.self): XMLFooterViewCell.self,
             NSStringFromClass(XMLElementImages.self): XMLImageViewsCell.self
         ]

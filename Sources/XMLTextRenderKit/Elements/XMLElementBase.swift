@@ -16,7 +16,6 @@ class XMLElementBase {
     var fontSize: CGFloat
     var textAlignment: NSTextAlignment
 
-    private(set) var blockSection: Bool = false
     private(set) var hasTopPaddingAttribute: Bool = false
     private(set) var hasBottomPaddingAttribute: Bool = false
     private(set) var hasLeadingAttribute: Bool = false
@@ -24,7 +23,11 @@ class XMLElementBase {
     private(set) var hasFontSizeAttribute: Bool = false
     private(set) var hasAlignmentAttribute: Bool = false
 
+    private(set) var id: String?
+
     required init(xml: XMLIndexer) {
+        id = XMLElementBase.parseStringValue(xml: xml, name: "id")
+
         if let parsedTopPadding = Self.parseCGFloatValue(xml: xml, name: "toppadding") {
             topPadding = parsedTopPadding
             hasTopPaddingAttribute = true
@@ -63,13 +66,14 @@ class XMLElementBase {
         }
     }
 
-    init() {
-        topPadding = 8
-        bottomPadding = 8
-        leading = 20
-        trailing = 20
-        fontSize = 17
-        textAlignment = .left
+    init(id: String?) {
+        self.id = id
+        self.topPadding = 8
+        self.bottomPadding = 8
+        self.leading = 20
+        self.trailing = 20
+        self.fontSize = 17
+        self.textAlignment = .left
     }
 
     final var className: String {
@@ -102,10 +106,6 @@ class XMLElementBase {
 
     func clearAttributedString() {
         fatalError("Sub class must implement this method.")
-    }
-
-    func updateBlockSection(_ v: Bool) {
-        blockSection = v
     }
 }
 

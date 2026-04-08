@@ -10,6 +10,7 @@ import SWXMLHash
 
 final class XMLElementFooter: XMLElementBase {
     private let content: String
+    private let inlineNodes: [XMLInlineNode]
     private var _attributedString: NSAttributedString?
     private var _textFrame: CGRect = .zero
 
@@ -17,6 +18,7 @@ final class XMLElementFooter: XMLElementBase {
 
     required init(xml: XMLIndexer) {
         content = xml.element!.text
+        inlineNodes = XMLInlineNodeParser.parseNodes(from: xml)
         super.init(xml: xml)
 
         topPadding = Self.parseCGFloatValue(xml: xml, name: "toppadding") ?? 15
@@ -49,46 +51,81 @@ final class XMLElementFooter: XMLElementBase {
 
     // MARK: - Utils
 
+    private lazy var textAttributes = { (
+        color: UIColor,
+        underline: Bool,
+        isBold: Bool,
+        isItalic: Bool
+    ) -> [NSAttributedString.Key: Any] in
+        let fontSize: CGFloat = 14.0
+        let font: UIFont = {
+            if isBold && isItalic {
+                let descriptor = UIFontDescriptor(name: "TimesNewRomanPSMT", size: fontSize)
+                    .withSymbolicTraits([.traitBold, .traitItalic])
+                if let descriptor {
+                    return UIFont(descriptor: descriptor, size: fontSize)
+                }
+                return UIFont.systemFont(ofSize: fontSize, weight: .semibold)
+            }
+            if isBold {
+                return UIFont(name: "TimesNewRomanPS-BoldMT", size: fontSize) ?? UIFont.boldSystemFont(ofSize: fontSize)
+            }
+            if isItalic {
+                return UIFont(name: "TimesNewRomanPS-ItalicMT", size: fontSize) ?? UIFont.italicSystemFont(ofSize: fontSize)
+            }
+            return UIFont(name: "TimesNewRomanPSMT", size: fontSize) ?? UIFont.systemFont(ofSize: fontSize)
+        }()
+
+        let paragraphStyle = NSMutableParagraphStyle()
+        paragraphStyle.firstLineHeadIndent = 0.0
+        paragraphStyle.headIndent = 0.0
+        paragraphStyle.tailIndent = 0.0
+        paragraphStyle.lineSpacing = 4.0
+
+        let underlineStyle: NSUnderlineStyle = underline ? .single : []
+        return [
+            .font: font,
+            .foregroundColor: color,
+            .paragraphStyle: paragraphStyle,
+            .underlineStyle: underlineStyle.rawValue
+        ]
+    }
+
     private func buildAttributedString() {
-        let linkAttributes: [NSAttributedString.Key: Any] = {
-            let paragraphStyle = NSMutableParagraphStyle()
-            paragraphStyle.firstLineHeadIndent = 0.0
-            paragraphStyle.headIndent = 0.0
-            paragraphStyle.tailIndent = 0.0
-            paragraphStyle.lineSpacing = 4.0
+        let nodes = inlineNodes.isEmpty ? [.text(content)] : inlineNodes
+        let renderer = XMLInlineRenderer { [weak self] style in
+            let color = style.isLink ? UIColor.link : UIColor.label
+            var attributes = self?.textAttributes(color, style.isLink, style.isBold, style.isItalic) ?? [:]
+            if let url = style.url {
+                attributes[.link] = url
+            }
+            return attributes
+        }
+        let attributedString = renderer.render(nodes: nodes)
 
-            let font = UIFont.init(name: "TimesNewRomanPSMT", size: 14.0) ?? UIFont.systemFont(ofSize: 14.0)
-            return [
-                NSAttributedString.Key.font: font,
-                NSAttributedString.Key.foregroundColor: UIColor.link,
-                NSAttributedString.Key.paragraphStyle: paragraphStyle
-            ]
-        }()
+        if attributedString.length == 0 {
+            attributedString.append(NSAttributedString(
+                string: content,
+                attributes: textAttributes(.label, false, false, false)
+            ))
+        }
 
-        let color = UIColor.label
+        let boldAttributes = textAttributes(.label, false, true, false)
+        XMLRegexPatterns.parseSpecialFont(attributedString: attributedString, pattern: XMLRegexPatterns.boldText, attributes: boldAttributes)
 
-        let attributes: [NSAttributedString.Key: Any] = {
-            let paragraphStyle = NSMutableParagraphStyle()
-            paragraphStyle.firstLineHeadIndent = 0.0
-            paragraphStyle.headIndent = 0.0
-            paragraphStyle.tailIndent = 0.0
-            paragraphStyle.lineSpacing = 4.0
+        let italicAttributes = textAttributes(.label, false, false, true)
+        XMLRegexPatterns.parseSpecialFont(attributedString: attributedString, pattern: XMLRegexPatterns.italicText, attributes: italicAttributes)
 
-            let font = UIFont.init(name: "TimesNewRomanPSMT", size: 14.0) ?? UIFont.systemFont(ofSize: 14.0)
-            return [
-                NSAttributedString.Key.font: font,
-                NSAttributedString.Key.foregroundColor: color,
-                NSAttributedString.Key.paragraphStyle: paragraphStyle
-            ]
-        }()
+        let linkAttributes = textAttributes(.link, true, false, false)
+        XMLRegexPatterns.parsePasteActionText(attributedString: attributedString, attributes: linkAttributes)
+        XMLRegexPatterns.parseLinkText(attributedString: attributedString, attributes: linkAttributes)
+        XMLRegexPatterns.parseNewParagraphMark(attributedString: attributedString)
 
-        let attributedString = NSMutableAttributedString(string: content, attributes: attributes)
-        XMLRegexPatterns.parseSpecialFont(attributedString: attributedString, pattern: XMLRegexPatterns.linkText, attributes: linkAttributes)
         _attributedString = attributedString
 
         let width = viewWidth - leading - trailing
         let size = CGSize(width: width, height: .greatestFiniteMagnitude)
-        _textFrame = (attributedString.string as NSString).boundingRect(with: size, options: .usesLineFragmentOrigin, attributes: attributes, context: nil)
+        _textFrame = attributedString.boundingRect(with: size, options: .usesLineFragmentOrigin, context: nil)
         _textFrame.size.height += 5
         _textFrame.origin.x = leading
         _textFrame.origin.y = 5

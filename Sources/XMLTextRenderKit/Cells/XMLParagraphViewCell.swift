@@ -35,11 +35,8 @@ final class XMLParagraphViewCell: XMLViewCellBase {
             textData = element
             textLayout = textData?.textLayout
 
-            if element.blockSection {
-                backgroundColor = XMLRenderConfig.shared.textInfoBackgroundColor
-            } else {
-                backgroundColor = .clear
-            }
+            backgroundColor = .clear
+            contentView.backgroundColor = .clear
 
             if let xmlImageData = element.xmlImageData {
                 xmlImageView.data = xmlImageData

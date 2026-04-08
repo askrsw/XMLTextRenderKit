@@ -5,6 +5,7 @@
 //  Created by haharsw on 2024/5/27.
 //
 
+import Foundation
 import SWXMLHash
 
 final class XMLFileParser {
@@ -34,6 +35,7 @@ final class XMLFileParser {
             "p-title": XMLElementTitle.self,
             "p-section":  XMLElementSection.self,
             "p-paragraph": XMLElementParagraph.self,
+            "p-list": XMLElementList.self,
             "p-footer": XMLElementFooter.self,
             "p-images": XMLElementImages.self
         ]
@@ -53,5 +55,19 @@ final class XMLFileParser {
         }
 
         return briefTextUnits
+    }
+
+    func listItems(forListId targetId: String) -> [String]? {
+        guard let list = flattenContents.first(where: { $0.id == targetId }) as? XMLElementList else {
+            return nil
+        }
+        return list.itemTexts
+    }
+
+    func attributedString(forListId targetId: String) -> NSAttributedString? {
+        guard let list = flattenContents.first(where: { $0.id == targetId }) as? XMLElementList else {
+            return nil
+        }
+        return list.attributedString
     }
 }

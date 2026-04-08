@@ -16,8 +16,71 @@ extension UIColor {
         self.init(red: r, green: g, blue: b, alpha: alpha)
     }
 
+    internal convenience init?(hexString: String) {
+        var normalized = hexString.trimmingCharacters(in: .whitespacesAndNewlines)
+        if normalized.hasPrefix("#") {
+            normalized.removeFirst()
+        }
+
+        guard normalized.count == 6 || normalized.count == 8,
+              let hex = UInt32(normalized, radix: 16) else {
+            return nil
+        }
+
+        if normalized.count == 6 {
+            self.init(hex: hex)
+        } else {
+            let alpha = CGFloat(hex & 0xFF) / 255
+            self.init(hex: hex >> 8, alpha: alpha)
+        }
+    }
+
+    internal static func xmlColor(from rawValue: String?) -> UIColor? {
+        guard let rawValue else {
+            return nil
+        }
+
+        let normalized = rawValue.trimmingCharacters(in: .whitespacesAndNewlines)
+        if normalized.hasPrefix("#") {
+            return UIColor(hexString: normalized)
+        }
+
+        switch normalized.lowercased() {
+            case "label": return .label
+            case "secondarylabel": return .secondaryLabel
+            case "tertiarylabel": return .tertiaryLabel
+            case "quaternarylabel": return .quaternaryLabel
+            case "link": return .link
+            case "systembackground": return .systemBackground
+            case "secondarysystembackground": return .secondarySystemBackground
+            case "tertiarysystembackground": return .tertiarySystemBackground
+            case "separator": return .separator
+            case "opaqueSeparator".lowercased(): return .opaqueSeparator
+            case "systemblue": return .systemBlue
+            case "systemgray": return .systemGray
+            case "systemgray2": return .systemGray2
+            case "systemgray3": return .systemGray3
+            case "systemgray4": return .systemGray4
+            case "systemgray5": return .systemGray5
+            case "systemgray6": return .systemGray6
+            case "black": return .black
+            case "white": return .white
+            case "red": return .red
+            case "green": return .green
+            case "blue": return .blue
+            case "orange": return .orange
+            case "yellow": return .yellow
+            case "purple": return .purple
+            case "brown": return .brown
+            case "cyan": return .cyan
+            case "magenta": return .magenta
+            case "clear": return .clear
+            default: return nil
+        }
+    }
+
     internal static var isDarkMode: Bool {
-        UIScreen.main.traitCollection.userInterfaceStyle == .dark
+        UIWindow.currentKeyWindow?.traitCollection.userInterfaceStyle == .dark
     }
 }
 

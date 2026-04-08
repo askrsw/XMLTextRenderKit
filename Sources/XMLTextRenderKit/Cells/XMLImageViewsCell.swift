@@ -29,11 +29,8 @@ final class XMLImageViewsCell: XMLViewCellBase {
                 return
             }
 
-            if element.blockSection {
-                backgroundColor = XMLRenderConfig.shared.textInfoBackgroundColor
-            } else {
-                backgroundColor = .clear
-            }
+            backgroundColor = .clear
+            contentView.backgroundColor = .clear
 
             textData = element
 
