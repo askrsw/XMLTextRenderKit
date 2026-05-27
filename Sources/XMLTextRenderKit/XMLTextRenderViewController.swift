@@ -26,6 +26,7 @@ final public class XMLTextRenderViewController: UIViewController {
 
     let showCloseButton: Bool
     let mainTitle: String
+    let icon: UIImage?
     let xmlUrl: URL
 
     let largeTitleDisplayMode: UINavigationItem.LargeTitleDisplayMode
@@ -33,8 +34,9 @@ final public class XMLTextRenderViewController: UIViewController {
     let startAction: (() -> Void)?
     let endAction: (()->Void)?
 
-    public init(xmlUrl: URL, mainTitle: String, showCloseButton: Bool = false, config: XMLRenderConfig?, largeTitleDisplayMode: UINavigationItem.LargeTitleDisplayMode = .never, startAction: (() -> Void)? = nil, endAction: (() -> Void)? = nil) {
-        self.mainTitle = mainTitle
+    public init(xmlUrl: URL, title: String, icon: UIImage? = nil, showCloseButton: Bool = false, config: XMLRenderConfig?, largeTitleDisplayMode: UINavigationItem.LargeTitleDisplayMode = .never, startAction: (() -> Void)? = nil, endAction: (() -> Void)? = nil) {
+        self.mainTitle = title
+        self.icon = icon
         self.showCloseButton = showCloseButton
         self.xmlUrl = xmlUrl
         self.startAction = startAction
@@ -62,6 +64,7 @@ final public class XMLTextRenderViewController: UIViewController {
 
         view.backgroundColor = .systemBackground
         navigationItem.title = mainTitle
+        navigationItem.titleView = makeTitleView()
         navigationController?.navigationBar.prefersLargeTitles = true
         navigationItem.largeTitleDisplayMode = largeTitleDisplayMode
 
@@ -178,5 +181,33 @@ extension XMLTextRenderViewController {
                 }
             }
         }
+    }
+
+    private func makeTitleView() -> UIView? {
+        guard largeTitleDisplayMode == .never, let icon = icon else { return nil }
+
+        let iconView = UIImageView(image: icon)
+        iconView.contentMode         = .scaleAspectFit
+        iconView.layer.cornerRadius  = 6
+        iconView.layer.masksToBounds = true
+        iconView.clipsToBounds       = true
+        iconView.translatesAutoresizingMaskIntoConstraints = false
+
+        // 用约束锁死尺寸，Stack View 才会遵从
+        NSLayoutConstraint.activate([
+            iconView.widthAnchor.constraint(equalToConstant: 22),
+            iconView.heightAnchor.constraint(equalToConstant: 22),
+        ])
+
+        let titleLabel   = UILabel(frame: .zero)
+        titleLabel.text       = mainTitle
+        titleLabel.font       = UIFont.boldSystemFont(ofSize: 17)
+        titleLabel.textColor  = UIColor.label
+
+        let stack       = UIStackView(arrangedSubviews: [iconView, titleLabel])
+        stack.axis      = .horizontal
+        stack.alignment = .center
+        stack.spacing   = 8.0
+        return stack;
     }
 }
