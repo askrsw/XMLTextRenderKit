@@ -28,15 +28,18 @@ final public class XMLTextRenderViewController: UIViewController {
     let mainTitle: String
     let xmlUrl: URL
 
+    let largeTitleDisplayMode: UINavigationItem.LargeTitleDisplayMode
+
     let startAction: (() -> Void)?
     let endAction: (()->Void)?
 
-    public init(xmlUrl: URL, mainTitle: String, showCloseButton: Bool = false, config: XMLRenderConfig?, startAction: (() -> Void)? = nil, endAction: (() -> Void)? = nil) {
+    public init(xmlUrl: URL, mainTitle: String, showCloseButton: Bool = false, config: XMLRenderConfig?, largeTitleDisplayMode: UINavigationItem.LargeTitleDisplayMode = .never, startAction: (() -> Void)? = nil, endAction: (() -> Void)? = nil) {
         self.mainTitle = mainTitle
         self.showCloseButton = showCloseButton
         self.xmlUrl = xmlUrl
         self.startAction = startAction
         self.endAction = endAction
+        self.largeTitleDisplayMode = largeTitleDisplayMode
         super.init(nibName: nil, bundle: nil)
 
         if let config = config {
@@ -59,6 +62,8 @@ final public class XMLTextRenderViewController: UIViewController {
 
         view.backgroundColor = .systemBackground
         navigationItem.title = mainTitle
+        navigationController?.navigationBar.prefersLargeTitles = true
+        navigationItem.largeTitleDisplayMode = largeTitleDisplayMode
 
         if showCloseButton {
             navigationItem.leftBarButtonItem = UIBarButtonItem(image: UIImage(systemName: "xmark.circle"), landscapeImagePhone: UIImage(systemName: "xmark.circle"), style: .plain, target: self, action: #selector(closeAction(_:)))
